@@ -72,4 +72,47 @@ coord_file = os.path.join(img_dir, "coordinates.txt")
 dataset = ReflectionDataset(img_dir, coord_file)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
+# Initialize model, loss, and optimizer
+model = ReflectionProbeCNN()
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+min_loss = float('inf')
+min_loss_epoch = -1
+
+# Training loop
+num_epochs = 1000
+for epoch in range(num_epochs):
+    model.train()
+    running_loss = 0.0
+    for coords, images in dataloader:
+        optimizer.zero_grad()
+        outputs = model(coords)
+        # Reshape images to match model output shape
+        images = images.permute(0, 1, 2, 3, 4)  # From [batch_size, 6, 128, 128, 3] to [batch_size, 6, 3, 128, 128]
+        loss = criterion(outputs, images)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item() * coords.size(0)
+
+    epoch_loss = running_loss / len(dataloader.dataset)
+    print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.12f}')
+    if epoch_loss < min_loss:
+        min_loss = epoch_loss
+        min_loss_epoch = epoch + 1
+
+print(f'The epoch with the minimum loss is {min_loss_epoch} with a loss of {min_loss:.12f}')
+
+# Save the trained model
+torch.save(model.state_dict(), "model2.pth")
+
+# Load the trained model
+model.load_state_dict(torch.load("model2.pth"))
+model.eval()
+
+# Dummy input for the model
+dummy_input = torch.randn(1, 3)
+
+# Export the model
+torch.onnx.export(model, dummy_input, "model2.onnx",
+                  input_names=['input'], output_names=['output'])
