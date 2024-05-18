@@ -81,7 +81,7 @@ min_loss = float('inf')
 min_loss_epoch = -1
 
 # Training loop
-num_epochs = 000
+num_epochs = 5000
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
